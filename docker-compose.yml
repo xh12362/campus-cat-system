@@ -1,0 +1,65 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: campus-cat-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: campus-cat-backend
+    environment:
+      BACKEND_PORT: "${BACKEND_PORT:-8000}"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - ./uploads:/workspace/uploads
+      - ./models:/workspace/models
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: campus-cat-ai-service
+    environment:
+      AI_SERVICE_PORT: "${AI_SERVICE_PORT:-8001}"
+      MODEL_DIR: "${MODEL_DIR:-/workspace/models}"
+      YOLO_MODEL_PATH: "${YOLO_MODEL_PATH:-/workspace/models/yolov8n.pt}"
+      UPLOAD_DIR: "${UPLOAD_DIR:-/workspace/uploads}"
+      ORIGINAL_UPLOAD_DIR: "${ORIGINAL_UPLOAD_DIR:-/workspace/uploads/original}"
+      CROPPED_DIR: "${CROPPED_DIR:-/workspace/uploads/cropped}"
+    ports:
+      - "${AI_SERVICE_PORT:-8001}:8001"
+    volumes:
+      - ./ai-service:/app
+      - ./uploads:/workspace/uploads
+      - ./models:/workspace/models
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    container_name: campus-cat-mysql
+    environment:
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-campus_cat}"
+      MYSQL_USER: "${MYSQL_USER:-cat_user}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-cat_password}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root_password}"
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

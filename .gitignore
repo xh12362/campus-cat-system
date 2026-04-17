@@ -1,0 +1,36 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Uploads
+uploads/original/*
+uploads/cropped/*
+!uploads/original/.gitkeep
+!uploads/cropped/.gitkeep
+
+# Models
+models/*.pt
+models/*.pth
+models/*.onnx
+!models/.gitkeep
+
+# Logs
+*.log
+*.out
+*.err
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
