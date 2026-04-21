@@ -26,3 +26,25 @@ class AIDetectionService:
                 "cropped_image_path": None,
                 "message": f"AI detection unavailable: {exc}",
             }
+
+    def recommend_from_cropped_path(self, cropped_image_path: str, top_k: int = 5) -> list[dict]:
+        try:
+            payload = json.dumps(
+                {
+                    "cropped_image_path": cropped_image_path,
+                    "top_k": top_k,
+                }
+            ).encode("utf-8")
+            req = request.Request(
+                f"{self.base_url}/api/ai/recommend",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=30) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                return list(data.get("candidates", []))
+        except error.HTTPError:
+            return []
+        except Exception:
+            return []

@@ -26,3 +26,13 @@ export function submitCatUpload(payload) {
     body: formData,
   });
 }
+
+export function createProfileFromUpload(payload) {
+  return request("/upload/create-profile", {
+    method: "POST",
+    body: JSON.stringify({
+      image_id: payload.imageId,
+      sighting_id: payload.sightingId,
+    }),
+  });
+}

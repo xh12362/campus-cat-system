@@ -1,109 +1,145 @@
-# Database Documentation
+# Database And Sample Profile Integration
 
-## Database
+## 数据库
 
-- Database name: `campus_cat`
-- Engine: MySQL 8
-- Character set: `utf8mb4`
+- 数据库名：`campus_cat`
+- 引擎：MySQL 8
+- 字符集：`utf8mb4`
 
-## Tables
+## 现有核心表
 
 ### user
 
-Stores simple uploader or operator information. First version does not implement a complex auth system.
-
-| Field | Type | Null | Description |
-| --- | --- | --- | --- |
-| `id` | BIGINT | no | Primary key |
-| `username` | VARCHAR(50) | no | Unique username |
-| `display_name` | VARCHAR(100) | yes | Display name |
-| `email` | VARCHAR(100) | yes | Unique email |
-| `created_at` | DATETIME | no | Record creation time |
+存放上传者或维护人员的基础信息。
 
 ### cat_profile
 
-Stores the main archive for one campus cat.
+猫档案主表。第一版中：
 
-| Field | Type | Null | Description |
-| --- | --- | --- | --- |
-| `id` | BIGINT | no | Primary key |
-| `name` | VARCHAR(100) | yes | Cat archive name. Auto-created uploads use `Cat-0001` style naming. |
-| `gender` | VARCHAR(20) | yes | Gender label |
-| `coat_color` | VARCHAR(100) | yes | Coat color |
-| `age_stage` | VARCHAR(30) | yes | Age stage such as kitten/adult |
-| `sterilization_status` | VARCHAR(30) | yes | Sterilization status |
-| `health_status` | VARCHAR(100) | yes | Health summary |
-| `distinguishing_features` | TEXT | yes | Key visible features |
-| `first_seen_at` | DATETIME | yes | First known sighting time |
-| `first_seen_location` | VARCHAR(255) | yes | First known sighting location |
-| `notes` | TEXT | yes | General notes |
-| `created_by` | BIGINT | yes | User id of creator |
-| `created_at` | DATETIME | no | Record creation time |
-| `updated_at` | DATETIME | no | Last update time |
+- 自动建档仍然写入这张表
+- 已知样本猫也建议导入到这张表
+- 第一版相似匹配返回的 `cat_profile_id` 应尽量与这张表中的 `id` 对齐
+
+字段重点：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 主键 |
+| `name` | 猫名称 |
+| `gender` | 性别 |
+| `coat_color` | 毛色 |
+| `first_seen_at` | 首次发现时间 |
+| `first_seen_location` | 首次发现地点 |
+| `distinguishing_features` | 外观特征 |
+| `notes` | 补充说明 |
 
 ### cat_image
 
-Stores uploaded original images and AI-related paths.
+存放上传原图与 AI 相关路径。
 
-| Field | Type | Null | Description |
-| --- | --- | --- | --- |
-| `id` | BIGINT | no | Primary key |
-| `cat_profile_id` | BIGINT | yes | Related cat profile id |
-| `file_path` | VARCHAR(255) | no | Original image path under `uploads/original/` |
-| `original_filename` | VARCHAR(255) | yes | Source filename from upload |
-| `mime_type` | VARCHAR(100) | yes | Uploaded content type |
-| `file_size` | INT | yes | File size in bytes |
-| `ai_feature_path` | VARCHAR(255) | yes | Cropped image path or future AI feature file path |
-| `ai_match_status` | VARCHAR(30) | no | Current AI result status such as `detected` or `pending` |
-| `notes` | TEXT | yes | Notes copied from upload |
-| `uploaded_by` | BIGINT | yes | User id of uploader |
-| `created_at` | DATETIME | no | Record creation time |
+字段重点：
+
+| 字段 | 说明 |
+| --- | --- |
+| `file_path` | 原图路径 |
+| `ai_feature_path` | 当前用于保存裁剪图路径 |
+| `ai_match_status` | 当前 AI 匹配状态 |
 
 ### cat_sighting
 
-Stores one discovery event.
+存放一次发现记录。
 
-| Field | Type | Null | Description |
-| --- | --- | --- | --- |
-| `id` | BIGINT | no | Primary key |
-| `cat_profile_id` | BIGINT | yes | Related cat profile id |
-| `image_id` | BIGINT | yes | Related uploaded image id |
-| `sighted_at` | DATETIME | no | Time when the cat was seen |
-| `location_text` | VARCHAR(255) | no | Human-readable location |
-| `notes` | TEXT | yes | Discovery notes |
-| `reported_by` | BIGINT | yes | User id of reporter |
-| `created_at` | DATETIME | no | Record creation time |
+## 第一版样本数据接入方案
 
-## Relationships
+第一版没有新增复杂特征表，而是先采用“文件样本 + 数据库档案对齐”的方案。
 
-- `cat_profile.id` -> `cat_image.cat_profile_id`
-- `cat_profile.id` -> `cat_sighting.cat_profile_id`
-- `cat_image.id` -> `cat_sighting.image_id`
-- `user.id` -> `cat_profile.created_by`
-- `user.id` -> `cat_image.uploaded_by`
-- `user.id` -> `cat_sighting.reported_by`
+样本来源：
 
-## Upload-to-Archive Flow
+- `datasets/cat_profiles.csv`
+- `datasets/north/<每只猫样本目录>/`
 
-### Case 1: Upload with `cat_profile_id`
+接入规则：
 
-If the client already knows the correct archive id:
+1. `cat_profiles.csv` 作为已知猫样本主表
+2. `CAT-0001` 这类 `cat_code` 解析为稳定 id，例如 `1`
+3. 样本猫建议导入数据库 `cat_profile`
+4. AI 推荐接口返回的 `cat_profile_id` 使用上述稳定 id
+5. 后端拿到候选后，可以直接用于现有推荐结果结构
 
-1. Save original image to `uploads/original/`
-2. Call AI detection and keep the existing detection response format
-3. Create `cat_image` bound to the given `cat_profile_id`
-4. Create `cat_sighting` bound to the same `cat_profile_id`
+## 为什么第一版不强制新增 `cat_feature` 表
 
-### Case 2: Upload without `cat_profile_id`
+这一版目标是“先有稳定可用的推荐结果”，因此优先做：
 
-If the client does not confirm an existing cat archive:
+- 样本目录读取
+- 样本图片轻量特征提取
+- 进程内缓存
+- Top-K 推荐返回
 
-1. Save original image to `uploads/original/`
-2. Call AI detection
-3. Auto-create a new `cat_profile`
-4. Use auto name format `Cat-0001`, `Cat-0002`, ...
-5. Fill `first_seen_at`, `first_seen_location`, and `notes` from upload data
-6. Create `cat_image` pointing to the new profile
-7. Create `cat_sighting` pointing to the new profile
+暂时不做：
 
-This first version intentionally does not implement a complex matching strategy. `recommendations` remains a placeholder suggestion list and does not block auto profile creation.
+- 复杂特征持久化表
+- 训练数据版本管理
+- embedding 在线更新流程
+- 大规模向量检索索引
+
+这能让第一版更快跑通，也不会明显扩大后端业务复杂度。
+
+## 样本档案导入脚本
+
+新增脚本：
+
+`backend/scripts/import_dataset_profiles.py`
+
+作用：
+
+- 读取 `datasets/cat_profiles.csv`
+- 将 `CAT-000x` 转换成 `cat_profile.id = x`
+- 将样本猫基础信息写入或更新到 `cat_profile`
+
+建议运行方式：
+
+```powershell
+cd backend
+python scripts/import_dataset_profiles.py
+```
+
+说明：
+
+- 脚本会按 `id` 做更新或插入
+- 适合作为初始化样本档案的方式
+- 这样 AI 推荐返回的 `cat_profile_id` 与数据库档案能保持稳定一致
+
+## 上传到推荐的链路
+
+当前链路如下：
+
+1. 用户上传原图
+2. 后端调用 `/api/ai/detect`
+3. AI 服务生成 `cropped_image_path`
+4. 后端将裁剪图路径传给 `/api/ai/recommend`
+5. AI 服务基于 `datasets/` 返回 Top-K 候选
+6. 后端将候选结果放入 `recommendations`
+
+## 第一版推荐结果结构
+
+后端保持以下候选结构：
+
+```json
+{
+  "cat_profile_id": 1,
+  "cat_name": "笑笑",
+  "similarity_score": 0.8231,
+  "reason": "Visual similarity matched dataset sample CAT-0001 using 11 reference image(s); best reference: 003.jpeg."
+}
+```
+
+## 后续可扩展方向
+
+当第一版推荐稳定后，可再考虑新增：
+
+- `cat_feature`：缓存每张样本图或每只猫的特征向量
+- `feature_version`：特征版本
+- `feature_source`：来源图片或裁剪图路径
+- `updated_at`：特征更新时间
+
+但这些属于下一阶段优化，不是当前第一版上线的必需条件。

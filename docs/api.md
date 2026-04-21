@@ -12,6 +12,14 @@
 
 Uploads one image, runs AI detection, stores image/sighting records, and may auto-create a cat profile.
 
+Recommendation behavior in the same request:
+
+- Backend first uses AI detection output `cropped_image_path`
+- Backend calls the AI recommendation service to get real similar-cat candidates by `sample_cat_code`
+- Backend maps `sample_cat_code` to database `cat_profile` rows by `dataset_cat_code`
+- Backend enriches candidates with profile name and optional `cover_image` when available
+- If AI recommendation is unavailable, backend falls back to recent profiles so response shape stays stable
+
 ### Request
 
 - Method: `POST`
@@ -71,9 +79,11 @@ When `cat_profile_id` is not provided, the backend treats the upload as not yet 
   "recommendations": [
     {
       "cat_profile_id": 7,
+      "sample_cat_code": "CAT-0007",
       "cat_name": "Cat-0007",
-      "similarity_score": null,
-      "reason": "AI matching placeholder."
+      "similarity_score": 0.8231,
+      "reason": "Visual similarity matched dataset sample CAT-0007 using 11 reference image(s); best reference: 003.jpeg.",
+      "cover_image": "/workspace/uploads/original/cat-0007-cover.jpg"
     }
   ],
   "detection": {
@@ -102,8 +112,21 @@ When `cat_profile_id` is not provided, the backend treats the upload as not yet 
 | `profile_created` | boolean | `true` when backend auto-created a new profile. |
 | `image` | object | Saved image record. |
 | `sighting` | object | Saved sighting record. |
-| `recommendations` | array | Current placeholder recommendation list. |
+| `recommendations` | array | Similar-cat candidates. Backend prefers real AI recommendation results and keeps the same array structure. |
 | `detection` | object | Existing AI detection result. This structure is kept unchanged for frontend compatibility. |
+
+### Recommendation Item
+
+Each item in `recommendations` keeps a stable shape:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `cat_profile_id` | integer or null | Candidate cat profile id after backend maps `sample_cat_code` to a real database row |
+| `sample_cat_code` | string or null | Stable dataset sample code such as `CAT-0007` |
+| `cat_name` | string or null | Candidate profile name |
+| `similarity_score` | number or null | AI similarity score |
+| `reason` | string | Why this candidate was returned |
+| `cover_image` | string or null | Optional cover image path from AI service or backend image records |
 
 ## GET /api/cats
 

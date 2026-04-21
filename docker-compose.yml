@@ -21,6 +21,7 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
+      - ./datasets:/workspace/datasets:ro
       - ./uploads:/workspace/uploads
       - ./models:/workspace/models
     depends_on:
@@ -35,6 +36,7 @@ services:
       AI_SERVICE_PORT: "${AI_SERVICE_PORT:-8001}"
       MODEL_DIR: "${MODEL_DIR:-/workspace/models}"
       YOLO_MODEL_PATH: "${YOLO_MODEL_PATH:-/workspace/models/yolov8n.pt}"
+      DATASET_ROOT: "${DATASET_ROOT:-/workspace/datasets}"
       UPLOAD_DIR: "${UPLOAD_DIR:-/workspace/uploads}"
       ORIGINAL_UPLOAD_DIR: "${ORIGINAL_UPLOAD_DIR:-/workspace/uploads/original}"
       CROPPED_DIR: "${CROPPED_DIR:-/workspace/uploads/cropped}"
@@ -42,6 +44,7 @@ services:
       - "${AI_SERVICE_PORT:-8001}:8001"
     volumes:
       - ./ai-service:/app
+      - ./datasets:/workspace/datasets:ro
       - ./uploads:/workspace/uploads
       - ./models:/workspace/models
     restart: unless-stopped

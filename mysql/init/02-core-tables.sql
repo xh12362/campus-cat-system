@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS `user` (
 
 CREATE TABLE IF NOT EXISTS cat_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  dataset_cat_code VARCHAR(30) NULL UNIQUE,
+  profile_source VARCHAR(16) NOT NULL DEFAULT 'real',
   name VARCHAR(100) NULL,
   gender VARCHAR(20) NULL,
   coat_color VARCHAR(100) NULL,
@@ -23,6 +25,7 @@ CREATE TABLE IF NOT EXISTS cat_profile (
   created_by BIGINT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_cat_profile_profile_source (profile_source),
   INDEX idx_cat_profile_created_at (created_at),
   CONSTRAINT fk_cat_profile_created_by
     FOREIGN KEY (created_by) REFERENCES `user`(id)

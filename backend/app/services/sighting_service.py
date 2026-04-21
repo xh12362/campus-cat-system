@@ -53,3 +53,29 @@ def create_image_and_sighting(
 def list_sightings(db: Session) -> list[CatSighting]:
     statement = select(CatSighting).order_by(CatSighting.sighted_at.desc(), CatSighting.id.desc())
     return list(db.scalars(statement).all())
+
+
+def get_image_and_sighting(
+    db: Session,
+    *,
+    image_id: int,
+    sighting_id: int,
+) -> tuple[CatImage | None, CatSighting | None]:
+    image = db.scalar(select(CatImage).where(CatImage.id == image_id))
+    sighting = db.scalar(select(CatSighting).where(CatSighting.id == sighting_id))
+    return image, sighting
+
+
+def assign_image_and_sighting_to_profile(
+    db: Session,
+    *,
+    image: CatImage,
+    sighting: CatSighting,
+    cat_profile_id: int,
+) -> tuple[CatImage, CatSighting]:
+    image.cat_profile_id = cat_profile_id
+    sighting.cat_profile_id = cat_profile_id
+    db.commit()
+    db.refresh(image)
+    db.refresh(sighting)
+    return image, sighting

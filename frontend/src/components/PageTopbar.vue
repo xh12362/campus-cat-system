@@ -1,8 +1,8 @@
 <template>
   <header class="topbar">
     <div>
-      <p class="page-kicker">V1 前端骨架</p>
-      <h2 class="page-title">{{ route.meta?.title || "校园流浪猫智能识别与档案管理系统" }}</h2>
+      <p class="page-kicker">校园流浪猫上报与档案查看</p>
+      <h2 class="page-title">{{ route.meta?.title || "校园流浪猫档案平台" }}</h2>
       <p class="page-kicker">{{ route.meta?.description }}</p>
     </div>
 

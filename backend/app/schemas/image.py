@@ -16,7 +16,9 @@ class CatImageRead(TimestampedModel):
 
 
 class MatchRecommendation(BaseModel):
-    cat_profile_id: int
+    cat_profile_id: int | None = None
+    sample_cat_code: str | None = None
     cat_name: str | None = None
     similarity_score: float | None = None
     reason: str
+    cover_image: str | None = None

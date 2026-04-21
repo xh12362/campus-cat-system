@@ -7,8 +7,12 @@ from uuid import uuid4
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from PIL import Image
 from PIL import UnidentifiedImageError
+from pydantic import BaseModel, Field
 from ultralytics import YOLO
 import uvicorn
+
+from app.sample_catalog import sample_catalog_summary
+from app.sample_matcher import rank_similar_cats
 
 
 HOST = "0.0.0.0"
@@ -21,6 +25,24 @@ app = FastAPI(
     version="0.1.0",
     description="YOLO-powered cat detection service for the campus cat system.",
 )
+
+
+class RecommendRequest(BaseModel):
+    cropped_image_path: str
+    top_k: int = Field(default=5, ge=1, le=10)
+
+
+class RecommendCandidate(BaseModel):
+    sample_cat_code: str
+    cat_name: str | None = None
+    similarity_score: float
+    reason: str
+
+
+class RecommendResponse(BaseModel):
+    query_image_path: str
+    top_k: int
+    candidates: list[RecommendCandidate]
 
 
 @lru_cache(maxsize=1)
@@ -118,6 +140,7 @@ def root() -> dict:
 @app.get("/health")
 def health() -> dict:
     model_exists = MODEL_PATH.exists()
+    dataset_summary = sample_catalog_summary()
     return {
         "service": "ai-service",
         "status": "ok" if model_exists else "degraded",
@@ -125,6 +148,7 @@ def health() -> dict:
         "model_exists": model_exists,
         "cropped_dir": str(CROPPED_DIR),
         "cropped_dir_exists": CROPPED_DIR.exists(),
+        "dataset": dataset_summary,
     }
 
 
@@ -154,6 +178,33 @@ async def detect_cat(
         "cropped_image_path": cropped_image_path,
         "message": "Cat detected successfully." if has_cat else "No cat detected in the image.",
     }
+
+
+@app.post("/api/ai/recommend", response_model=RecommendResponse)
+def recommend_similar_cats(payload: RecommendRequest) -> RecommendResponse:
+    try:
+        candidates = rank_similar_cats(
+            query_image_path=payload.cropped_image_path,
+            top_k=payload.top_k,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Recommendation failed: {exc}") from exc
+
+    return RecommendResponse(
+        query_image_path=payload.cropped_image_path,
+        top_k=payload.top_k,
+        candidates=[
+            RecommendCandidate(
+                sample_cat_code=item.sample_cat_code,
+                cat_name=item.cat_name,
+                similarity_score=item.similarity_score,
+                reason=item.reason,
+            )
+            for item in candidates
+        ],
+    )
 
 
 if __name__ == "__main__":

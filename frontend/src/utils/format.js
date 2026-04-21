@@ -44,12 +44,35 @@ export function formatPathTail(value) {
 
 export function detectionSummary(detection) {
   if (!detection) {
-    return "未返回检测结果";
+    return "暂未返回识别结果";
   }
 
   if (!detection.model_loaded) {
-    return detection.message || "检测服务未加载";
+    return detection.message || "识别服务暂未就绪";
   }
 
-  return detection.has_cat ? "检测到猫" : "未检测到猫";
+  return detection.has_cat ? "检测到猫咪主体" : "未检测到猫咪主体";
+}
+
+export function resolveAssetUrl(value) {
+  if (!value) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//.test(value) || value.startsWith("data:")) {
+    return value;
+  }
+
+  const normalized = value.replaceAll("\\", "/");
+  const uploadsIndex = normalized.indexOf("/uploads/");
+
+  if (uploadsIndex >= 0) {
+    return normalized.slice(uploadsIndex);
+  }
+
+  if (normalized.startsWith("/uploads/")) {
+    return normalized;
+  }
+
+  return "";
 }

@@ -5,11 +5,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
+PROFILE_SOURCE_REAL = "real"
+PROFILE_SOURCE_SAMPLE = "sample"
+PROFILE_SOURCE_TEST = "test"
+
 
 class CatProfile(Base):
     __tablename__ = "cat_profile"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    dataset_cat_code: Mapped[str | None] = mapped_column(String(30), unique=True)
+    profile_source: Mapped[str] = mapped_column(String(16), nullable=False, default=PROFILE_SOURCE_REAL)
     name: Mapped[str | None] = mapped_column(String(100))
     gender: Mapped[str | None] = mapped_column(String(20))
     coat_color: Mapped[str | None] = mapped_column(String(100))

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -6,8 +7,12 @@ from app.schemas.common import ORMModel, TimestampedModel
 from app.schemas.image import CatImageRead
 from app.schemas.sighting import SightingListItem
 
+ProfileSource = Literal["real", "sample", "test"]
+
 
 class CatProfileBase(BaseModel):
+    dataset_cat_code: str | None = None
+    profile_source: ProfileSource = "real"
     name: str | None = None
     gender: str | None = None
     coat_color: str | None = None

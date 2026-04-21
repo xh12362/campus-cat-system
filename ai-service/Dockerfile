@@ -10,8 +10,8 @@ RUN rm -f /etc/apt/sources.list.d/yarn.list \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-COPY app/server.py /app/app/server.py
+COPY app /app/app
 
 EXPOSE 8001
 
-CMD ["python", "/app/app/server.py"]
+CMD ["python", "-m", "app.server"]
