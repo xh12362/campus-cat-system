@@ -5,3 +5,5 @@ ultralytics==8.3.39
 opencv-python-headless==4.10.0.84
 pillow==10.4.0
 numpy==2.1.1
+torch>=2.0.0
+torchvision>=0.15.0

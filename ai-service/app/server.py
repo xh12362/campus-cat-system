@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+import cv2
+import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from PIL import Image
 from PIL import UnidentifiedImageError
@@ -17,8 +19,13 @@ from app.sample_matcher import rank_similar_cats
 
 HOST = "0.0.0.0"
 PORT = int(os.getenv("AI_SERVICE_PORT", "8001"))
-MODEL_PATH = Path(os.getenv("YOLO_MODEL_PATH", "/workspace/models/yolov8n.pt"))
+MODEL_PATH = Path(os.getenv("YOLO_MODEL_PATH", "/workspace/models/yolov8m.pt"))
 CROPPED_DIR = Path(os.getenv("CROPPED_DIR", "/workspace/uploads/cropped"))
+
+# Detection tuning
+DETECTION_CONF = float(os.getenv("DETECTION_CONF", "0.25"))
+DETECTION_IOU = float(os.getenv("DETECTION_IOU", "0.45"))
+CLAHE_ENABLED = os.getenv("CLAHE_ENABLED", "true").lower() == "true"
 
 app = FastAPI(
     title="Campus Cat AI Service",
@@ -47,15 +54,27 @@ class RecommendResponse(BaseModel):
 
 @lru_cache(maxsize=1)
 def get_model() -> YOLO:
-    """Load the YOLO model once and reuse it across requests."""
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"YOLO model not found: {MODEL_PATH}")
-    return YOLO(str(MODEL_PATH))
+    """Load the YOLO model once. Auto-downloads by name if not found locally."""
+    if MODEL_PATH.exists():
+        return YOLO(str(MODEL_PATH))
+    return YOLO(MODEL_PATH.name)
 
 
 def normalize_image_path(file_path: str) -> Path:
     """Resolve user-provided paths to reduce cwd-dependent behavior."""
     return Path(file_path).expanduser().resolve()
+
+
+def apply_clahe(image: Image.Image) -> Image.Image:
+    """Enhance contrast for low-light images using CLAHE."""
+    img = np.array(image)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    l = clahe.apply(l)
+    lab = cv2.merge([l, a, b])
+    enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+    return Image.fromarray(enhanced)
 
 
 def load_image(file_path: str | None, file_bytes: bytes | None) -> tuple[Image.Image, str]:
@@ -80,8 +99,11 @@ def load_image(file_path: str | None, file_bytes: bytes | None) -> tuple[Image.I
 
 
 def run_detection(image: Image.Image) -> tuple[list[dict], float | None]:
+    if CLAHE_ENABLED:
+        image = apply_clahe(image)
+
     model = get_model()
-    results = model.predict(image, verbose=False)
+    results = model.predict(image, conf=DETECTION_CONF, iou=DETECTION_IOU, verbose=False)
     if not results:
         return [], None
 

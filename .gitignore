@@ -22,7 +22,7 @@ uploads/cropped/*
 models/*.pt
 models/*.pth
 models/*.onnx
-!models/.gitkeep
+ai-service/*.pt
 
 # Logs
 *.log
